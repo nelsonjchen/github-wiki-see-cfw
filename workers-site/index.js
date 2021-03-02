@@ -7,7 +7,7 @@ import { getAssetFromKV, mapRequestToAsset } from '@cloudflare/kv-asset-handler'
  * 2. we will return an error message on exception in your Response rather
  *    than the default 404.html page.
  */
-const DEBUG = false
+const DEBUG = true
 
 addEventListener('fetch', event => {
   try {
@@ -28,11 +28,6 @@ async function handleEvent(event) {
   const url = new URL(event.request.url)
   let options = {}
 
-  /**
-   * You can add custom logic to how we fetch your assets
-   * by configuring the function `mapRequestToAsset`
-   */
-  // options.mapRequestToAsset = handlePrefix(/^\/docs/)
 
   try {
     if (DEBUG) {
@@ -41,6 +36,11 @@ async function handleEvent(event) {
         bypassCache: true,
       }
     }
+
+    if (event.request.url.includes('/ghw')) {
+      return await handleProxy(event)
+    }
+
     return await getAssetFromKV(event, options)
   } catch (e) {
     // if an error is thrown try to serve the asset at 404.html
@@ -58,23 +58,28 @@ async function handleEvent(event) {
   }
 }
 
-/**
- * Here's one example of how to modify a request to
- * remove a specific prefix, in this case `/docs` from
- * the url. This can be useful if you are deploying to a
- * route on a zone, or if you only want your static content
- * to exist at a specific path.
- */
-function handlePrefix(prefix) {
-  return request => {
-    // compute the default (e.g. / -> index.html)
-    let defaultAssetKey = mapRequestToAsset(request)
-    let url = new URL(defaultAssetKey.url)
+async function handleProxy(event) {
+  console.log(`Handling Proxy for event`)
+  const url = new URL(event.request.url)
 
-    // strip the prefix from the path for lookup
-    url.pathname = url.pathname.replace(prefix, '/')
-
-    // inherit all other props from the default request
-    return new Request(url.toString(), defaultAssetKey)
+  const params = Array.from(url.pathname.matchAll(/^\/ghw\/([[a-zA-Z0-9-_.]+)\/([a-zA-Z0-9-_.]+)(\/(.*?))?/g))
+  for (const m of params) {
+    console.log(m);
   }
+
+  const init = {
+    headers: {
+      "content-type": "text/html;charset=UTF-8",
+    },
+  }
+
+  const res = await fetch("https://github.com/nelsonjchen/github-wiki-test/wiki", init);
+
+  return new Response(`
+  original url: ${url.pathname}\n
+  original url: ${params[0]}\n
+  original url: ${params[1]}\n
+  original url: ${params[2]}\n
+  res.text(): ${await res.text()}
+  `, { status: 200 })
 }
