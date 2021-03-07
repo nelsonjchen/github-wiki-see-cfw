@@ -1,3 +1,4 @@
+import * as cheerio from 'cheerio';
 
 const htmlHeader = { 'content-type': 'text/html' }
 const htmlStyle = `
@@ -137,40 +138,25 @@ async function handleProxyEvent(event) {
     github_fetch_init
   )
 
-  let wiki_content_element
-  let new_response
-  try {
-    new_response = new HTMLRewriter()
-      .on("#wiki-content", {
-        element(element) {
-          console.log("ELEMENT!!!!!!")
-          console.log(element)
-          console.log(`tagname: ${element.tagName}`)
-          // wiki_content_element = element.textContent
-        },
-        // text(text) {
-        //   console.log(`text: ${text.text}`)
-        // }
-      })
-      .transform(github_response)
-  } catch (e)
-  {
-    console.log(e.message)
-  }
-  await new_response.text()
+  const github_html_parsed = await github_response.text()
+  const parsed_cheerio_html = cheerio.load(github_html_parsed)
+  const container_html = parsed_cheerio_html('#repo-content-pjax-container').html()
+
+
 
   // return new Response(proxyHtmlTemplate, {
   //   headers: { 'content-type': 'text/html' },
   // })
   return new Response(`
-  original url: ${url.pathname}\n
+  original hehe url: ${url.pathname}\n
   user_or_org: ${params.groups.user_or_org}\n
   repo: ${params.groups.user_or_org}\n
   rest: ${params.groups.rest}\n
   original_url: ${github_wiki_url}\n
-  element: ${wiki_content_element}
-  
-  `, { status: 200 })
+  container html: ${container_html}\n
+  `, {
+    status: 200
+  })
 
 
 }

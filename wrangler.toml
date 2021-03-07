@@ -1,5 +1,5 @@
 name = "my-static-site"
-type = "javascript"
+type = "webpack"
 account_id = "c455dc5b9661861484370320794ab63c"
 workers_dev = true
 route = ""
