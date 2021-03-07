@@ -1,7 +1,3 @@
-addEventListener('fetch', event => {
-  event.respondWith(handleRequest(event.request))
-})
-
 const htmlHeader = { 'content-type': 'text/html' }
 const htmlStyle = `
 <style>
@@ -54,7 +50,7 @@ ${htmlStyle}
         </li>
     </ol>
     <h2>Project Page</h2>
-      <p><a href="https://github.com/nelsonjchen/github-wiki-see">GitHub</a></p>
+      <p><a href='https://github.com/nelsonjchen/github-wiki-see'>GitHub</a></p>
     <h2>Examples / My Seeds</h2>
     <ul>
         <li>
@@ -72,13 +68,30 @@ ${htmlStyle}
 </html>
 `
 
-async function handleRequest(request) {
-  console.log(request.pathname)
-  if (request.pathname === '/' || request.pathname === undefined) {
-    return new Response(frontPageHtml,
+addEventListener('fetch', event => {
+  try {
+    event.respondWith(handleEvent(event))
+  } catch (e) {
+    return event.respondWith(
+      new Response(e.message || e.toString(), {
+        status: 500,
+      }),
+    )
+
+  }
+})
+
+async function handleEvent(event) {
+  const url = new URL(event.request.url)
+
+  console.log(url.pathname)
+  if (url.pathname === '/') {
+    return new Response(
+      frontPageHtml,
       {
         headers: htmlHeader,
-      })
+      },
+    )
   }
 
   return new Response('Hello worker!!', {
