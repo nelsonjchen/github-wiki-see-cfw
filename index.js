@@ -1,3 +1,4 @@
+
 const htmlHeader = { 'content-type': 'text/html' }
 const htmlStyle = `
 <style>
@@ -130,11 +131,34 @@ async function handleProxyEvent(event) {
     },
   }
 
-  let github_wiki_url = `https://github.com/${params.groups.user_or_org}/${params.groups.repo}/wiki${rest_of_url}`
+  const github_wiki_url = `https://github.com/${params.groups.user_or_org}/${params.groups.repo}/wiki${rest_of_url}`
   const github_response = await fetch(
     github_wiki_url,
     github_fetch_init
   )
+
+  let wiki_content_element
+  let new_response
+  try {
+    new_response = new HTMLRewriter()
+      .on("#wiki-content", {
+        element(element) {
+          console.log("ELEMENT!!!!!!")
+          console.log(element)
+          console.log(`tagname: ${element.tagName}`)
+          // wiki_content_element = element.textContent
+        },
+        // text(text) {
+        //   console.log(`text: ${text.text}`)
+        // }
+      })
+      .transform(github_response)
+  } catch (e)
+  {
+    console.log(e.message)
+  }
+  await new_response.text()
+
   // return new Response(proxyHtmlTemplate, {
   //   headers: { 'content-type': 'text/html' },
   // })
@@ -144,8 +168,8 @@ async function handleProxyEvent(event) {
   repo: ${params.groups.user_or_org}\n
   rest: ${params.groups.rest}\n
   original_url: ${github_wiki_url}\n
-
-  res.text(): ${await github_response.text()}
+  element: ${wiki_content_element}
+  
   `, { status: 200 })
 
 
