@@ -67,6 +67,27 @@ ${htmlStyle}
 </body>
 </html>
 `
+const proxyHtmlTemplate = `
+<html lang='en'>
+<head>
+<title>Original Title - GitHub Wiki SEE</title>
+${htmlStyle}
+</head>
+<body>
+<h1>Proxy here</h1>
+<div>
+<ul>
+<li>Original URL: </li>
+</ul>
+</div>
+<div id='original_sidebar'>
+Original Sidebar Here
+</div>
+<div id='original_body'>
+Original Body Here
+</div>
+</body>
+`
 
 addEventListener('fetch', event => {
   try {
@@ -77,14 +98,12 @@ addEventListener('fetch', event => {
         status: 500,
       }),
     )
-
   }
 })
 
 async function handleEvent(event) {
   const url = new URL(event.request.url)
 
-  console.log(url.pathname)
   if (url.pathname === '/') {
     return new Response(
       frontPageHtml,
@@ -93,8 +112,41 @@ async function handleEvent(event) {
       },
     )
   }
+  return await handleProxyEvent(event)
+}
 
-  return new Response('Hello worker!!', {
-    headers: { 'content-type': 'text/plain' },
-  })
+async function handleProxyEvent(event) {
+  console.log(`Handling Proxy for event`)
+  const url = new URL(event.request.url)
+
+  const regExpUrl = /^\/ghw\/(?<user_or_org>[[a-zA-Z0-9-_.]+?)\/(?<repo>[a-zA-Z0-9-_.]+)(?<rest>\/.*)?/g
+
+  const params = regExpUrl.exec(url.pathname)
+  const rest_of_url = params.groups.rest || ''
+
+  const github_fetch_init = {
+    headers: {
+      'content-type': 'text/html;charset=UTF-8',
+    },
+  }
+
+  let github_wiki_url = `https://github.com/${params.groups.user_or_org}/${params.groups.repo}/wiki${rest_of_url}`
+  const github_response = await fetch(
+    github_wiki_url,
+    github_fetch_init
+  )
+  // return new Response(proxyHtmlTemplate, {
+  //   headers: { 'content-type': 'text/html' },
+  // })
+  return new Response(`
+  original url: ${url.pathname}\n
+  user_or_org: ${params.groups.user_or_org}\n
+  repo: ${params.groups.user_or_org}\n
+  rest: ${params.groups.rest}\n
+  original_url: ${github_wiki_url}\n
+
+  res.text(): ${await github_response.text()}
+  `, { status: 200 })
+
+
 }
