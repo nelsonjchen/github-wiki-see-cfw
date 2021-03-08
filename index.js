@@ -1,6 +1,6 @@
 import * as cheerio from 'cheerio';
 
-const htmlHeader = { 'content-type': 'text/html' }
+const htmlHeader = { 'content-type': 'text/html;charset=UTF-8' }
 const htmlStyle = `
 <style>
         body {
@@ -56,12 +56,12 @@ ${htmlStyle}
     <h2>Examples / My Seeds</h2>
     <ul>
         <li>
-          <a href='/ghw/nelsonjchen/github-wiki-test'>
+          <a href='/nelsonjchen/github-wiki-test/wiki/'>
             nelsonjchen/github-wiki-test
           </a>
         </li>
         <li>
-          <a href='/ghw/commaai/openpilot'>
+          <a href='/commaai/openpilot/wiki/'>
             commaai/openpilot
           </a>
         </li>
@@ -82,11 +82,8 @@ ${htmlStyle}
 <li>Original URL: </li>
 </ul>
 </div>
-<div id='original_sidebar'>
-Original Sidebar Here
-</div>
 <div id='original_body'>
-Original Body Here
+Original Sidebar Here
 </div>
 </body>
 `
@@ -121,9 +118,14 @@ async function handleProxyEvent(event) {
   console.log(`Handling Proxy for event`)
   const url = new URL(event.request.url)
 
-  const regExpUrl = /^\/ghw\/(?<user_or_org>[[a-zA-Z0-9-_.]+?)\/(?<repo>[a-zA-Z0-9-_.]+)(?<rest>\/.*)?/g
-
+  // Make sure the URL matches the Wiki scheme. Abort otherwise.
+  const regExpUrl = /^\/(?<user_or_org>[[a-zA-Z0-9-_.]+?)\/(?<repo>[a-zA-Z0-9-_.]+)\/wiki(?<rest>\/.*)?/g
   const params = regExpUrl.exec(url.pathname)
+  console.log(`params ${params}`)
+  if (params == null) {
+    return Response.redirect('/', 301)
+  }
+
   const rest_of_url = params.groups.rest || ''
 
   const github_fetch_init = {
@@ -142,7 +144,13 @@ async function handleProxyEvent(event) {
   const parsed_cheerio_html = cheerio.load(github_html_parsed)
   const container_html = parsed_cheerio_html('#repo-content-pjax-container').html()
 
+  const new_html = cheerio.load(proxyHtmlTemplate)
+  new_html('#original_body').replaceWith(container_html)
 
+  return new Response(new_html.html(),
+    {
+      headers: htmlHeader,
+    })
 
   // return new Response(proxyHtmlTemplate, {
   //   headers: { 'content-type': 'text/html' },
